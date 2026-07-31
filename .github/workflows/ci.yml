@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  # soroban-sdk 21.7.4 does not yet support the `reference-types` /
+  # `multivalue` wasm features that rustc enables by default from ~1.82
+  # onward. Mirrors WASM_RUSTFLAGS in the Makefile.
+  WASM_RUSTFLAGS: -C target-feature=-reference-types,-multivalue
+
+jobs:
+  build:
+    name: Build (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install soroban-cli
+        run: cargo install --locked soroban-cli
+
+      - name: Build contracts
+        run: cargo build --target wasm32-unknown-unknown --release -p escrow
+        env:
+          RUSTFLAGS: ${{ env.WASM_RUSTFLAGS }}
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install soroban-cli
+        run: cargo install --locked soroban-cli
+
+      - name: Run tests
+        run: cargo test --workspace
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install soroban-cli
+        run: cargo install --locked soroban-cli
+
+      - name: Clippy (escrow lib)
+        run: cargo clippy -p escrow --lib -- -D warnings
+
+      - name: Clippy (test-utils lib)
+        run: cargo clippy -p test-utils --lib -- -D warnings
+
+      - name: Clippy (workspace tests)
+        run: cargo clippy --workspace --tests -- -D warnings
+
+  fmt:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
