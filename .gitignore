@@ -1,0 +1,20 @@
+/target
+**/target
+
+# Soroban / Stellar CLI local state
+.soroban
+.stellar
+
+# Auto-generated ledger snapshots written by soroban-sdk's test Env
+**/test_snapshots/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Env files that may hold secrets (deploy keys, RPC URLs)
+.env
+.env.*
+!.env.example
